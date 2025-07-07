@@ -3830,7 +3830,16 @@ document.getElementById('startBtn').onclick = function() {
   }
 };
 document.getElementById('pauseBtn').onclick = togglePause;
-document.getElementById('stopBtn').onclick = stopGame;
+document.getElementById('stopBtn').onclick = function() {
+    // 드롭다운이 열려있을 때는 STOP 버튼 기능 비활성화
+    const sentenceList = document.getElementById('sentenceList');
+    if (sentenceList && sentenceList.style.display === 'block') {
+        console.log("드롭다운 열린 상태에서 STOP 버튼 클릭 - 무시");
+        return false;
+    }
+    
+    stopGame();
+};
 
 function resetGameStateForStartStop() {
     bullets = []; enemies = []; enemyBullets = []; detachedPetals = [];
@@ -4455,22 +4464,43 @@ function initializeSentenceDropdown() {
         if (event.cancelable) event.preventDefault();
         event.stopPropagation();
         
+        // 시작화면(!isGameRunning && !isGamePaused) 또는 게임 resume 상태(isGameRunning && isGamePaused)에서만 동작
+        const isStartScreen = !isGameRunning && !isGamePaused;
+        const isResumeState = isGameRunning && isGamePaused;
+        
+        if (!isStartScreen && !isResumeState) {
+            console.log("드롭다운 허용되지 않는 상태: 게임 실행 중");
+            return; // 게임 실행 중이면 드롭다운 불가
+        }
+        
         // 드롭다운 토글
         if (sentenceList.style.display === 'block') {
             console.log("드롭다운 닫기");
             sentenceList.style.display = 'none';
-            // 드롭다운 닫힐 때 게임 resume 및 버튼 활성화
+            // 드롭다운 닫힐 때 게임 상태 복원 및 버튼 활성화
+            stopDropdownMp3Playback(); // 영어 읽기 중단
+            
+            // 드롭다운 버튼 원상 복구
+            dropdownBtn.innerHTML = '&#9662;';
+            dropdownBtn.style.fontSize = '47px';
+            dropdownBtn.style.lineHeight = '';
+            dropdownBtn.style.minWidth = '';
+            dropdownBtn.style.minHeight = '';
+            dropdownBtn.style.padding = '';
+            
+            // 시작 화면으로 돌아갈 때 버튼 활성화
+            setTopButtonsDisabled(false);
+            
+            // resume 상태에서 드롭다운을 열었던 경우
             if (isDropdownPause) {
-                togglePause();
                 isDropdownPause = false;
-                setTopButtonsDisabled(false);
             }
+            
             // 하단 미디어가 일시정지 상태였다면 재생
             if (isDropdownBottomMediaPaused) {
                 if (typeof toggleBottomMediaPause === 'function') toggleBottomMediaPause();
                 isDropdownBottomMediaPaused = false;
             }
-            stopDropdownMp3Playback();
         } else {
             console.log("드롭다운 열기");
             // 항상 목록 새로 생성하여 최신 상태 유지
@@ -4479,6 +4509,9 @@ function initializeSentenceDropdown() {
             // 목록 표시
             sentenceList.style.display = 'block';
             
+            // 드롭다운 열릴 때 항상 버튼 비활성화
+            setTopButtonsDisabled(true);
+            
             // 현재 선택된 문장으로 스크롤
             setTimeout(() => {
                 const activeItem = sentenceList.querySelector(`.sentence-item:nth-child(${sentenceIndex + 1})`);
@@ -4486,19 +4519,33 @@ function initializeSentenceDropdown() {
                     activeItem.scrollIntoView({ behavior: 'auto', block: 'center' });
                 }
             }, 100); // 시간을 늘려 안정적으로 스크롤 처리
-            // 드롭다운 열릴 때 게임 일시정지 및 버튼 비활성화
-            if (isGameRunning && !isGamePaused) {
-                togglePause();
+            
+            // resume 상태에서 드롭다운을 열었을 경우 flag 설정
+            if (isGameRunning && isGamePaused) {
                 isDropdownPause = true;
-                setTopButtonsDisabled(true);
             }
+            
             // 하단 미디어가 재생 중이면 일시정지
             if (typeof isBottomMediaPlaying !== 'undefined' && isBottomMediaPlaying) {
                 if (typeof toggleBottomMediaPause === 'function') toggleBottomMediaPause();
                 isDropdownBottomMediaPaused = true;
             }
+            
+            // 드롭다운 버튼 모양 변경
+            dropdownBtn.style.position = 'relative';
+            dropdownBtn.innerHTML = `
+                <svg width="34" height="34" viewBox="0 0 34 34"
+                  style="display:block; position:relative; left:19px; top:19px;">
+                  <rect x="6" y="13" width="22" height="12" fill="white" />
+                </svg>
+            `;
+            dropdownBtn.style.fontSize = '6px';
+            dropdownBtn.style.lineHeight = '1';
+            dropdownBtn.style.minWidth = '0';
+            dropdownBtn.style.minHeight = '0';
+            dropdownBtn.style.padding = '0';
+            
             // 영어 문장 읽어주기 (현재 선택된 문장)
-            // speakSentence(sentences[sentenceIndex]); // <-- 이 줄을 주석처리 또는 삭제
             setTimeout(() => {
               dropdownMp3Index = (dropdownSentenceIndex + 1) % 96;
               playAllSentenceMp3sFromStart();
@@ -4525,14 +4572,20 @@ function initializeSentenceDropdown() {
         e.stopPropagation();
     }, { passive: true });
     
-    // 문서 클릭 시 드롭다운 닫기
+    // 문서 클릭 시 드롭다운 닫기 (드롭다운 버튼 클릭만 허용하도록 수정)
     document.removeEventListener('click', documentClickHandler);
     document.addEventListener('click', documentClickHandler);
     
     function documentClickHandler(event) {
-        if (sentenceList.style.display === 'block' && !sentenceList.contains(event.target) && event.target !== dropdownBtn) {
-            sentenceList.style.display = 'none';
-            // 화살표 모양 변경 없음 (고정)
+        // 드롭다운이 열려있을 때, 문장 목록 내부의 요소나 드롭다운 버튼 클릭만 처리
+        if (sentenceList.style.display === 'block') {
+            // 드롭다운 목록이나 버튼이 아닌 다른 요소 클릭 시 이벤트 무시
+            if (!sentenceList.contains(event.target) && event.target !== dropdownBtn) {
+                console.log("드롭다운 열린 상태에서 외부 요소 클릭 - 이벤트 차단");
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
         }
     }
     
