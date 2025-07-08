@@ -3757,37 +3757,41 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-  enemies.forEach(e => {
-    if (e.imgIndex === 2 || e.imgIndex === 3) {
-      ctx.save();
-      ctx.translate(e.x + e.w / 2, e.y + e.h / 2);
-      ctx.rotate(e.rotation);
-      ctx.drawImage(e.img, -e.w / 2, -e.h / 2, e.w, e.h);
-      ctx.restore();
-    } else { ctx.drawImage(e.img, e.x, e.y, e.w, e.h); }
-    if (e.imgIndex === 1 && coffeeSteamVideo && coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_ENOUGH_DATA && !coffeeSteamVideo.paused) {
-      const steamScale = 0.5; const steamWidth = e.w * steamScale * 1.5;
-      const steamHeight = e.h * steamScale * 1.6; const steamOffsetX = (e.w - steamWidth) / 2;
-      const steamOffsetY = -steamHeight * 0.85;
-      const prevCompositeOperation = ctx.globalCompositeOperation;
-      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.65;
-      ctx.drawImage(coffeeSteamVideo, e.x + steamOffsetX, e.y + steamOffsetY, steamWidth, steamHeight);
-      ctx.globalAlpha = 1.0; ctx.globalCompositeOperation = prevCompositeOperation;
-    }
-  });
-  bullets.forEach(b => {
-    if (b.img && b.img.complete && b.img.naturalWidth > 0) {
-      ctx.drawImage(b.img, b.x, b.y, b.w, b.h);
-    }
-  });
-  detachedPetals.forEach(p => {
-      ctx.save();
-      ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
-      ctx.rotate(p.rotation);
-      ctx.drawImage(p.img, -p.w / 2, -p.h / 2, p.w, p.h);
-      ctx.restore();
-  });
+  
+  // 게임이 실행 중일 때만 플레이어와 적, 총알 등을 그림
+  if (isGameRunning) {
+    ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
+    enemies.forEach(e => {
+      if (e.imgIndex === 2 || e.imgIndex === 3) {
+        ctx.save();
+        ctx.translate(e.x + e.w / 2, e.y + e.h / 2);
+        ctx.rotate(e.rotation);
+        ctx.drawImage(e.img, -e.w / 2, -e.h / 2, e.w, e.h);
+        ctx.restore();
+      } else { ctx.drawImage(e.img, e.x, e.y, e.w, e.h); }
+      if (e.imgIndex === 1 && coffeeSteamVideo && coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_ENOUGH_DATA && !coffeeSteamVideo.paused) {
+        const steamScale = 0.5; const steamWidth = e.w * steamScale * 1.5;
+        const steamHeight = e.h * steamScale * 1.6; const steamOffsetX = (e.w - steamWidth) / 2;
+        const steamOffsetY = -steamHeight * 0.85;
+        const prevCompositeOperation = ctx.globalCompositeOperation;
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.65;
+        ctx.drawImage(coffeeSteamVideo, e.x + steamOffsetX, e.y + steamOffsetY, steamWidth, steamHeight);
+        ctx.globalAlpha = 1.0; ctx.globalCompositeOperation = prevCompositeOperation;
+      }
+    });
+    bullets.forEach(b => {
+      if (b.img && b.img.complete && b.img.naturalWidth > 0) {
+        ctx.drawImage(b.img, b.x, b.y, b.w, b.h);
+      }
+    });
+    detachedPetals.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
+        ctx.rotate(p.rotation);
+        ctx.drawImage(p.img, -p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+    });
+  }
 
   const previousGlobalCenterAlpha = centerAlpha;
   if (sentenceActive && fireworks && fireworksState) {
@@ -3915,7 +3919,23 @@ function startGame() {
       coffeePlayPromise.catch(error => console.error("Error playing coffee steam video:", error));
     }
   }
+  // 현재 문장 정보 임시 저장
+  const tempCurrentQuestionSentence = currentQuestionSentence;
+  const tempCurrentAnswerSentence = currentAnswerSentence;
+  const tempCurrentQuestionSentenceIndex = currentQuestionSentenceIndex;
+  const tempCurrentAnswerSentenceIndex = currentAnswerSentenceIndex;
+  
   resetGameStateForStartStop();
+  
+  // 선택된 문장이 있는 경우 문장 정보 복원
+  if (tempCurrentQuestionSentence || tempCurrentAnswerSentence) {
+    currentQuestionSentence = tempCurrentQuestionSentence;
+    currentAnswerSentence = tempCurrentAnswerSentence;
+    currentQuestionSentenceIndex = tempCurrentQuestionSentenceIndex;
+    currentAnswerSentenceIndex = tempCurrentAnswerSentenceIndex;
+    console.log("시작 시 선택된 문장 유지");
+  }
+  
   let storedIndex = Number(localStorage.getItem('sentenceIndex') || 0);
   sentenceIndex = storedIndex % sentences.length;
   localStorage.setItem('sentenceIndex', sentenceIndex.toString());
@@ -3929,6 +3949,17 @@ function startGame() {
 }
 
 function togglePause() {
+  // 문장이 선택된 상태에서 게임이 아직 시작되지 않은 경우(START를 누르지 않고 문장만 선택한 경우)
+  // RESUME 버튼을 클릭했을 때 게임을 시작
+  if (!isGameRunning && (currentQuestionSentence || currentAnswerSentence) && document.getElementById('pauseBtn').textContent === 'RESUME') {
+    console.log("문장이 선택된 상태에서 RESUME 클릭 - 게임을 시작합니다");
+    
+    // 현재 선택된 문장을 기억하고 게임 시작 (문장이 초기화되지 않게 함)
+    startGame();
+    return;
+  }
+  
+  // 기존 토글 일시정지 로직
   if (!isGameRunning) return;
   isGamePaused = !isGamePaused;
   const pauseButton = document.getElementById('pauseBtn');
@@ -4698,31 +4729,77 @@ function populateSentenceList() {
             dropdownBtn.style.minHeight = '';
             dropdownBtn.style.padding = '';
             setTopButtonsDisabled(false);
-            if (typeof isBottomMediaPlaying !== 'undefined' && !isBottomMediaPlaying) {
-              if (typeof toggleBottomMediaPause === 'function') toggleBottomMediaPause();
-              if (typeof isDropdownBottomMediaPaused !== 'undefined') isDropdownBottomMediaPaused = false;
+            
+            // 게임을 자동으로 시작하지 않고, 문장만 선택하여 화면에 표시
+            const isOdd = index % 2 === 0;
+            const sentenceTextVal = sentences[index];
+            const lines = sentenceTextVal.split(/\\n|\n/);
+            const line1 = lines[0] ? lines[0].trim() : "";
+            const line2 = lines[1] ? lines[1].trim() : "";
+            const sentenceObj = { line1, line2 };
+            
+            // 이전 문장 초기화
+            currentQuestionSentence = null;
+            currentAnswerSentence = null;
+            currentQuestionSentenceIndex = null;
+            currentAnswerSentenceIndex = null;
+            
+            // 새 문장 설정
+            if (isOdd) {
+                currentQuestionSentence = sentenceObj;
+                currentQuestionSentenceIndex = index;
+            } else {
+                currentAnswerSentence = sentenceObj;
+                currentAnswerSentenceIndex = index;
             }
-            if (isGameRunning) {
-                stopGame();
+            
+            // 문장 선택에 관한 메시지 출력
+            console.log(`문장 ${index + 1} 선택됨. 문장이 화면에 표시됩니다. 게임을 시작하려면 START 또는 RESUME 버튼을 클릭하세요.`);
+            
+            // 시작 화면에서만(게임이 시작되지 않은 상태) PAUSE 버튼을 RESUME으로 바꾸고 게임을 준비 상태로 만듦
+            if (!isGameRunning && !isGamePaused) {
+                // START 버튼을 누른 효과를 주어 게임을 준비 상태로 만듦
+                // isGameRunning은 true로 설정하지 않고, 문장만 선택된 상태로 유지
+                
+                // PAUSE 버튼을 RESUME으로 바꿈
+                const pauseBtn = document.getElementById('pauseBtn');
+                pauseBtn.textContent = 'RESUME';
+                
+                // 게임 일시정지 상태로 설정하지 않음 (isGamePaused는 false로 유지)
+                // 이렇게 하면 RESUME 버튼을 한 번만 클릭해도 게임이 시작됨
+                
+                console.log("시작 화면에서 문장 선택 - RESUME 버튼으로 바꾸고 게임 준비 상태로 설정");
+                
+                // 게임이 준비됨 -> 하단 미디어는 아래에서 올라오게 함
+                if (typeof onGamePaused === 'function') {
+                    onGamePaused();
+                }
             }
-            setTimeout(() => {
-                startGame();
-                setTimeout(() => {
-                    const isOdd = index % 2 === 0;
-                    const sentenceTextVal = sentences[index];
-                    const lines = sentenceTextVal.split(/\\n|\n/);
-                    const line1 = lines[0] ? lines[0].trim() : "";
-                    const line2 = lines[1] ? lines[1].trim() : "";
-                    const sentenceObj = { line1, line2 };
-                    if (isOdd) {
-                        currentQuestionSentence = sentenceObj;
-                        currentQuestionSentenceIndex = index;
-                    } else {
-                        currentAnswerSentence = sentenceObj;
-                        currentAnswerSentenceIndex = index;
-                    }
-                }, 300);
-            }, 100);
+            
+            // 항상 문장을 화면에 표시 (게임 상태와 무관하게)
+            // 캔버스 초기화
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 기본 게임 화면 그리기
+            draw();
+            
+            // 중앙 문장 표시 (필요한 경우 강제로 투명도 설정)
+            centerAlpha = 1.0;
+            drawCenterSentence();
+            
+            // 다음 프레임에서도 한 번 더 그려서 확실하게 표시되도록 함
+            // 이는 게임 정지 상태에서 resetGameStateForStartStop 함수가 호출되어 
+            // currentQuestionSentence와 currentAnswerSentence를 null로 설정하는 문제를 해결하기 위함
+            requestAnimationFrame(function() {
+                // 캔버스 초기화
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 중앙 문장 표시
+                centerAlpha = 1.0;
+                drawCenterSentence();
+            });
         });
         // sentenceItem에는 클릭 이벤트를 부여하지 않는다.
         

@@ -3,6 +3,7 @@ let currentBottomMediaIndex = 0; // 현재 표시 중인 미디어 인덱스 (0�
 let bottomMediaTimer = null; // 자동 전환용 타이머
 let isBottomMediaPlaying = true; // 하단 미디어 재생 상태
 let bottomMediaFiles = []; // 정렬된 미디어 파일 목록을 저장할 배열
+let isBottomAudioEnded = false; // 하단 미디어의 오디오가 이미 종료되었는지 여부를 추적
 
 // 전역 변수: 첫 폭발 발생 여부를 추적
 let firstExplosionOccurred = false;
@@ -366,6 +367,26 @@ function resumeAnimation() {
       return;
     }
     
+    // 비디오인 경우 오디오 상태를 확인
+    if (media.tagName === 'VIDEO') {
+      // 현재 재생 시간 위치 확인
+      const currentTime = media.currentTime || 0;
+      const duration = media.duration || 0;
+      
+      if (duration > 0 && currentTime >= duration - 0.5) {
+        // 비디오가 거의 끝에 있는 경우, 오디오가 종료된 것으로 간주
+        console.log("애니메이션 재개: 비디오가 거의 끝에 도달함 - 오디오 종료로 간주");
+        isBottomAudioEnded = true;
+        media.muted = true;
+      } else if (isBottomAudioEnded) {
+        console.log("애니메이션 재개: 오디오가 이미 종료됨 - 음소거 유지");
+        media.muted = true;
+      } else {
+        console.log("애니메이션 재개: 오디오 정상 재생 가능 - 음소거 해제");
+        media.muted = false;
+      }
+    }
+    
     // 현재 컨테이너 위치를 직접 확인
     const currentBottom = parseInt(container.style.bottom) || 0;
     
@@ -418,6 +439,27 @@ function resumeAnimation() {
 function slideUp(element, media, callback, isResuming = false) {
   const container = element;
   const targetMedia = media;
+  
+  // 비디오인 경우 오디오 상태 확인
+  if (targetMedia && targetMedia.tagName === 'VIDEO') {
+    // 새 애니메이션이 시작되는 경우 오디오 관련 설정 초기화
+    if (!isResuming) {
+      isBottomAudioEnded = false;
+      targetMedia.muted = false;
+      console.log("슬라이드 업: 새 비디오 시작 - 오디오 상태 초기화");
+    }
+    // 재개되는 애니메이션인 경우 현재 상태 확인
+    else {
+      const currentTime = targetMedia.currentTime || 0;
+      const duration = targetMedia.duration || 0;
+      
+      if (duration > 0 && currentTime >= duration - 0.5) {
+        isBottomAudioEnded = true;
+        targetMedia.muted = true;
+        console.log("슬라이드 업 재개: 비디오가 거의 끝에 도달함 - 오디오 종료로 간주");
+      }
+    }
+  }
   
   // 재개가 아닌 새 애니메이션인 경우에만 초기화
   if (!isResuming) {
@@ -709,6 +751,16 @@ function onGamePaused() {
       // 비디오 요소가 있다면 일시정지
       const bottomVideo = document.getElementById('bottomVideo');
       if (bottomVideo && bottomVideo.style.display !== 'none') {
+        // 비디오 일시정지 전에 오디오 상태 확인
+        if (bottomVideo.duration > 0 && !bottomVideo.paused) {
+          // 오디오가 끝에 도달했는지 확인
+          const audioTrackEnded = bottomVideo.currentTime >= bottomVideo.duration - 0.5; // 0.5초 여유
+          if (audioTrackEnded && !isBottomAudioEnded) {
+            isBottomAudioEnded = true;
+            console.log('하단 비디오 오디오 트랙 종료 감지 (일시정지 시)');
+          }
+        }
+        
         bottomVideo.pause();
       }
       
@@ -759,10 +811,30 @@ function onGameResumed() {
       // 일시정지된 애니메이션 재개
       resumeAnimation();
       
-      // 비디오 요소가 있다면 재생
+      // 비디오 요소가 있다면 재생 (단, 오디오가 이미 끝난 상태가 아닌 경우에만)
       const bottomVideo = document.getElementById('bottomVideo');
       if (bottomVideo && bottomVideo.style.display !== 'none') {
-        bottomVideo.play().catch(e => console.log('미디어 재생 오류:', e));
+        // 비디오의 현재 상태 확인
+        const currentTime = bottomVideo.currentTime || 0;
+        const duration = bottomVideo.duration || 0;
+        
+        if (duration > 0 && currentTime >= duration - 0.5) {
+          // 비디오가 거의 끝에 있는 경우
+          console.log('비디오가 거의 끝에 도달함 - 오디오 종료로 간주');
+          isBottomAudioEnded = true;
+          bottomVideo.muted = true;
+          bottomVideo.play().catch(e => console.log('미디어 재생 오류:', e));
+        } else if (!isBottomAudioEnded) {
+          // 오디오가 아직 종료되지 않은 경우
+          console.log('하단 비디오 재생 시도 - 오디오 정상 재생');
+          bottomVideo.muted = false; // 명시적으로 음소거 해제
+          bottomVideo.play().catch(e => console.log('미디어 재생 오류:', e));
+        } else {
+          // 오디오가 이미 종료된 경우
+          console.log('하단 비디오 재생 - 오디오는 음소거 상태로 재생');
+          bottomVideo.muted = true;
+          bottomVideo.play().catch(e => console.log('미디어 재생 오류:', e));
+        }
       }
       
       // 미디어 재생 상태로 설정
@@ -844,8 +916,37 @@ function toggleBottomMediaPause() {
   const bottomVideo = document.getElementById('bottomVideo');
   if (bottomVideo && bottomVideo.style.display !== 'none') {
     if (isBottomMediaPlaying) {
-      bottomVideo.play().catch(e => console.log('하단 비디오 재생 오류:', e));
+      // 비디오의 현재 상태 확인
+      const currentTime = bottomVideo.currentTime || 0;
+      const duration = bottomVideo.duration || 0;
+      
+      if (duration > 0 && currentTime >= duration - 0.5) {
+        // 비디오가 거의 끝에 있는 경우
+        console.log('토글: 비디오가 거의 끝에 도달함 - 오디오 종료로 간주');
+        isBottomAudioEnded = true;
+        bottomVideo.muted = true;
+        bottomVideo.play().catch(e => console.log('하단 비디오 재생 오류:', e));
+      } else if (!isBottomAudioEnded) {
+        // 오디오가 아직 종료되지 않은 경우
+        console.log('토글: 하단 비디오 재생 - 오디오 정상 재생');
+        bottomVideo.muted = false; // 명시적으로 음소거 해제
+        bottomVideo.play().catch(e => console.log('하단 비디오 재생 오류:', e));
+      } else {
+        // 오디오가 이미 종료된 경우
+        console.log('토글: 하단 비디오 재생 - 오디오는 음소거 상태로 재생');
+        bottomVideo.muted = true;
+        bottomVideo.play().catch(e => console.log('하단 비디오 재생 오류:', e));
+      }
     } else {
+      // 일시정지 전에 오디오 상태를 확인하여 설정
+      const currentTime = bottomVideo.currentTime || 0;
+      const duration = bottomVideo.duration || 0;
+      
+      if (duration > 0 && currentTime >= duration - 0.5) {
+        isBottomAudioEnded = true;
+        console.log('토글: 일시정지 전 비디오가 거의 끝에 도달함 - 오디오 종료로 간주');
+      }
+      
       bottomVideo.pause();
     }
   }
@@ -1037,9 +1138,12 @@ function showBottomVideoContent(index) {
     bottomVideo.className = 'no-border-at-all video-touchable';
     bottomVideo.controls = true; 
     bottomVideo.autoplay = false;
-    bottomVideo.muted = false;
+    bottomVideo.muted = false;  // 반드시 음소거 해제 상태로 시작
     bottomVideo.playsInline = true;
     bottomImageContainer.appendChild(bottomVideo);
+  } else {
+    // 기존 비디오 요소가 있는 경우, 명시적으로 음소거 해제
+    bottomVideo.muted = false;
   }
   
   // 다른 미디어 숨김
@@ -1057,6 +1161,9 @@ function showBottomVideoContent(index) {
   
   bottomVideo.style.display = 'block';
   bottomVideo.style.opacity = '0'; // 시작 투명도 초기화
+  // 새 비디오를 로드하기 전에 음소거 상태와 오디오 종료 플래그를 명확하게 재설정
+  bottomVideo.muted = false; // 명시적으로 음소거 해제
+  isBottomAudioEnded = false; // 오디오 종료 플래그 초기화
   bottomVideo.src = `images/bottom/${index}.mp4`;
   
   bottomVideo.onloadeddata = function() {
@@ -1086,10 +1193,26 @@ function showBottomVideoContent(index) {
   };
   
   bottomVideo.onended = function() {
+    // 비디오가 끝날 때 오디오도 끝났음을 표시
+    isBottomAudioEnded = true;
+    console.log('하단 비디오 오디오 재생 완료');
+    
     if (isBottomMediaPlaying) {
       moveToNextMedia();
     }
   };
+  
+  // 오디오만 종료되었을 때 플래그 설정
+  bottomVideo.addEventListener('timeupdate', function() {
+    // 오디오 트랙이 있고 재생 중이면서 현재 시간이 오디오 끝에 도달했는지 확인
+    if (bottomVideo.duration > 0 && !bottomVideo.paused) {
+      const audioTrackEnded = bottomVideo.currentTime >= bottomVideo.duration - 0.5; // 0.5초 여유
+      if (audioTrackEnded && !isBottomAudioEnded) {
+        isBottomAudioEnded = true;
+        console.log('하단 비디오 오디오 트랙 종료 감지');
+      }
+    }
+  });
 }
 
 // 모든 하단 미디어 요소 초기화
