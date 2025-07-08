@@ -301,6 +301,7 @@ html, body {
 .sentence-number {
   display: inline-block;
   min-width: 40px;
+  margin-left: 3px; /* 번호를 우측으로 3px 이동 */
   margin-right: 3px; /* 8px에서 5px 줄여 3px로 변경하여 문장 시작을 좌측으로 5px 이동 */
   font-weight: bold;
   color: #16c016;
@@ -458,7 +459,7 @@ video::-webkit-media-controls {
 }
 
 .sentence-text {
-  font-size: 18.5px; /* 기존 17.96px의 103% */
+  font-size: 19.5px; /* 기존 18.5px에서 1px 증가 */
   -webkit-tap-highlight-color: transparent !important;
   user-select: none;
   background: transparent !important;

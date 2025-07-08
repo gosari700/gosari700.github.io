@@ -41,10 +41,10 @@
   </div>
 
   <!-- 김 효과를 위한 숨겨진 비디오 요소 -->  <video id="coffeeSteamVideo" src="images/coffee6.webm" autoplay loop muted playsinline style="display: none;"></video>
-  <script src="script.js?v=2.0"></script>
-  <script src="dropdown.js"></script>
+  <script src="bottomImage.js?v=4.2"></script>
+  <script src="script.js?v=2.1"></script>
+  <script src="dropdown.js?v=1.1"></script>
   <script src="sentenceImage.js?v=1.2"></script>
-  <script src="bottomImage.js?v=3.0"></script>
   <script>
     // 동영상 플레이어 컨트롤 향상을 위한 추가 스크립트
     document.addEventListener('DOMContentLoaded', function() {
@@ -248,56 +248,9 @@
       localStorage.setItem('gameSentenceIndex', gameSentenceIndex.toString());
     }
 
-    // populateSentenceList 함수 내에서
-    // sentenceNumber, sentenceText 각각에 클릭 이벤트 분리
-    sentenceNumber.addEventListener('click', function(e) {
-      e.stopPropagation();
-      e.preventDefault();
-      stopDropdownMp3Playback();
-      playAllSentenceMp3sFromStart(index);
-    });
-    sentenceText.addEventListener('click', function(e) {
-      // 기존 sentenceItem 클릭 이벤트 코드 복사 (index, sentenceList 등 context 유지)
-      e.preventDefault();
-      e.stopPropagation();
-      sentenceIndex = index;
-      localStorage.setItem('sentenceIndex', sentenceIndex.toString());
-      sentenceList.style.display = 'none';
-      stopDropdownMp3Playback();
-      dropdownBtn.innerHTML = '&#9662;';
-      dropdownBtn.style.fontSize = '47px';
-      dropdownBtn.style.lineHeight = '';
-      dropdownBtn.style.minWidth = '';
-      dropdownBtn.style.minHeight = '';
-      dropdownBtn.style.padding = '';
-      setTopButtonsDisabled(false);
-      if (typeof isBottomMediaPlaying !== 'undefined' && !isBottomMediaPlaying) {
-        if (typeof toggleBottomMediaPause === 'function') toggleBottomMediaPause();
-        if (typeof isDropdownBottomMediaPaused !== 'undefined') isDropdownBottomMediaPaused = false;
-      }
-      if (isGameRunning) {
-        stopGame();
-      }
-      setTimeout(() => {
-        startGame();
-        setTimeout(() => {
-          const isOdd = index % 2 === 0;
-          const sentenceTextVal = sentences[index];
-          const lines = sentenceTextVal.split(/\\n|\n/);
-          const line1 = lines[0] ? lines[0].trim() : "";
-          const line2 = lines[1] ? lines[1].trim() : "";
-          const sentenceObj = { line1, line2 };
-          if (isOdd) {
-            currentQuestionSentence = sentenceObj;
-            currentQuestionSentenceIndex = index;
-          } else {
-            currentAnswerSentence = sentenceObj;
-            currentAnswerSentenceIndex = index;
-          }
-        }, 300);
-      }, 100);
-    });
-
+    // 이 부분 script.js에서 처리하므로 삭제
+    // sentenceNumber, sentenceText 클릭 이벤트는 script.js의 populateSentenceList 함수에 정의됨
+    
     // populateSentenceList에서 각 sentence-item에 data-index 부여
     sentenceItem.className = 'sentence-item';
     sentenceItem.setAttribute('data-index', index);
@@ -311,13 +264,25 @@
       }
       
       if (!window.isGamePaused) {
+        // PAUSE 버튼 클릭: PAUSE -> RESUME 상태로 변경 (게임 일시정지)
         togglePause();
         this.textContent = 'RESUME';
         window.isGamePaused = true;
+        
+        // 게임이 일시정지됨 -> 하단 미디어는 아래에서 올라오게 함
+        if (typeof onGamePaused === 'function') {
+          onGamePaused();
+        }
       } else {
+        // RESUME 버튼 클릭: RESUME -> PAUSE 상태로 변경 (게임 재개)
         togglePause();
         this.textContent = 'PAUSE';
         window.isGamePaused = false;
+        
+        // 게임이 재개됨 -> 하단 미디어는 아래에서 올라오게 함
+        if (typeof onGameResumed === 'function') {
+          onGameResumed();
+        }
       }
     };
 
