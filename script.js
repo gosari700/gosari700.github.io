@@ -4738,7 +4738,8 @@ function populateSentenceList() {
             const line2 = lines[1] ? lines[1].trim() : "";
             const sentenceObj = { line1, line2 };
             
-            // 이전 문장 초기화
+            // 이전 문장 및 복제본 초기화
+            clearQuestionWordClones(); // 모든 클론 제거
             currentQuestionSentence = null;
             currentAnswerSentence = null;
             currentQuestionSentenceIndex = null;
