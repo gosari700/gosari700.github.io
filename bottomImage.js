@@ -1192,12 +1192,18 @@ function showBottomVideoContent(index) {
     bottomImageContainer.style.display = 'none';
   };
   
+  // 비디오가 이미 다음 미디어로 넘어갔는지 확인하기 위한 플래그
+  let hasMovedToNextMedia = false;
+  
   bottomVideo.onended = function() {
     // 비디오가 끝날 때 오디오도 끝났음을 표시
     isBottomAudioEnded = true;
     console.log('하단 비디오 오디오 재생 완료');
     
-    if (isBottomMediaPlaying) {
+    // 이미 다음 미디어로 넘어갔는지 확인하고, 넘어가지 않았을 때만 실행
+    if (isBottomMediaPlaying && !hasMovedToNextMedia) {
+      hasMovedToNextMedia = true;
+      console.log(`비디오 ${index}.mp4 종료 - 다음 미디어로 넘어감`);
       moveToNextMedia();
     }
   };
@@ -1210,6 +1216,9 @@ function showBottomVideoContent(index) {
       if (audioTrackEnded && !isBottomAudioEnded) {
         isBottomAudioEnded = true;
         console.log('하단 비디오 오디오 트랙 종료 감지');
+        
+        // 오디오 트랙 종료 시 다음 미디어로 넘어가지 않음
+        // onended 이벤트에서만 처리하도록 수정
       }
     }
   });
