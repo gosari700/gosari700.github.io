@@ -4038,6 +4038,17 @@ function stopGame() {
   if (currentSentenceAudio) {
       currentSentenceAudio.pause(); currentSentenceAudio.currentTime = 0; currentSentenceAudio = null;
   }
+  
+  // 하단 미디어 정지 및 초기화
+  if (typeof stopBottomMediaShow === 'function') {
+    stopBottomMediaShow();
+  }
+  
+  // 상단 미디어 초기화 및 숨김
+  if (SentenceMediaManager && typeof SentenceMediaManager.hideAllMedia === 'function') {
+    SentenceMediaManager.hideAllMedia();
+  }
+  
   resetGameStateForStartStop();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }

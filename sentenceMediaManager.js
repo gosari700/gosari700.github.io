@@ -234,11 +234,12 @@ const SentenceMediaManager = {
       sentenceVideo.style.display = 'none';
     }
     
-    // 이미지 초기 설정
+    // 이미지 초기 설정 - 비디오와 동일한 페이드 인 효과 적용을 위해 transform 속성 추가
     sentenceImage.style.display = 'block';
     sentenceImage.classList.remove('show');
     sentenceImage.style.opacity = '0';
-    sentenceImage.style.transition = `opacity ${MEDIA_TRANSITION_IN_TIME/1000}s ease-in`;
+    sentenceImage.style.transform = 'scale(0.8)'; // 비디오와 동일하게 시작 크기를 작게 설정
+    sentenceImage.style.transition = `opacity ${MEDIA_TRANSITION_IN_TIME/1000}s ease-in, transform ${MEDIA_TRANSITION_IN_TIME/1000}s ease-in`;
     
     // 이미지 경로 설정
     const imagePath = `images/${folder}/${sentenceNumber}.jpg`;
@@ -254,10 +255,11 @@ const SentenceMediaManager = {
       sentenceImage.style.outline = 'none';
       sentenceImageContainer.style.display = 'block';
       
-      // 페이드인 시작 (3초)
+      // 페이드인 시작 (2초)
       setTimeout(() => {
         console.log(`${sentenceNumber}번 이미지 페이드인 시작 - 소요 시간: ${MEDIA_TRANSITION_IN_TIME/1000}초`);
         sentenceImage.style.opacity = '1';
+        sentenceImage.style.transform = 'scale(1)'; // 비디오와 동일하게 최종 크기로 확대
         
         // 페이드인 완료
         setTimeout(() => {
@@ -493,10 +495,11 @@ const SentenceMediaManager = {
     
     console.log(`미디어 페이드아웃 시작 - 소요 시간: ${MEDIA_TRANSITION_OUT_TIME/1000}초`);
     
-    // 이미지 페이드아웃
+    // 이미지 페이드아웃 - 비디오와 동일하게 transform 속성 추가
     if (sentenceImage && sentenceImage.style.display !== 'none') {
-      sentenceImage.style.transition = `opacity ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out`;
+      sentenceImage.style.transition = `opacity ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out, transform ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out`;
       sentenceImage.style.opacity = '0';
+      sentenceImage.style.transform = 'scale(0.8)'; // 비디오와 동일하게 작아지는 효과 추가
       console.log('이미지 페이드아웃 시작');
     }
     
@@ -510,7 +513,7 @@ const SentenceMediaManager = {
       console.log('비디오 페이드아웃 시작 및 재생 중지');
     }
     
-    // 페이드아웃 완료 후 콜백 실행 (정확히 3초 후)
+    // 페이드아웃 완료 후 콜백 실행 (정확히 2초 후)
     this.hideSentenceImageTimer = setTimeout(() => {
       console.log('미디어 페이드아웃 완료');
       if (typeof callback === 'function') {
@@ -526,9 +529,11 @@ const SentenceMediaManager = {
     const sentenceImage = document.getElementById('sentenceImage');
     const sentenceVideo = document.getElementById('sentenceVideo');
     
-    // 이미지 초기화
+    // 이미지 초기화 - 비디오와 동일하게 transform 속성 설정
     if (sentenceImage) {
       sentenceImage.classList.remove('show');
+      sentenceImage.style.transform = 'scale(0)';
+      sentenceImage.style.opacity = '0';
       sentenceImage.src = '';
     }
     

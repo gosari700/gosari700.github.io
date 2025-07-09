@@ -342,13 +342,14 @@ html, body {
   background-color: transparent !important; /* 배경색 투명 */
   transform: scale(0); /* 초기 크기를 0으로 설정 */
   opacity: 0; /* 초기 투명도를 0으로 설정 */
-  transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* 1.5초 ease-out 애니메이션 */
+  object-fit: contain; /* 비율 유지하며 크기에 맞추기 (특히 17.jpg 같은 이미지용) */
+  transition: opacity 2s ease-in, transform 2s ease-in; /* 비디오와 동일하게 2초 트랜지션 효과 적용 */
 }
 
-/* 이미지가 나타날 때의 애니메이션 클래스 */
+/* 이미지가 나타날 때의 애니메이션 클래스 - CSS에서는 사용하지 않고 JS에서 직접 스타일 적용 */
 #sentenceImage.show {
-  transform: scale(1); /* 원본 크기로 확대 */
-  opacity: 1; /* 완전 불투명으로 변경 */
+  transform: scale(1) !important; /* 원본 크기로 확대 */
+  opacity: 1 !important; /* 완전 불투명으로 변경 */
 }
 
 /* 동영상 요소에 대한 스타일 */
