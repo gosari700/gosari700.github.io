@@ -342,7 +342,8 @@ html, body {
   background-color: transparent !important; /* 배경색 투명 */
   transform: scale(0); /* 초기 크기를 0으로 설정 */
   opacity: 0; /* 초기 투명도를 0으로 설정 */
-  object-fit: contain; /* 비율 유지하며 크기에 맞추기 (특히 17.jpg 같은 이미지용) */
+  object-fit: cover !important; /* 비율 유지하며 컨테이너에 맞춤 - 동영상과 동일하게 cover로 변경 */
+  object-position: center -45px !important; /* 상단 45px 크롭 - 동영상과 동일하게 설정 */
   transition: opacity 2s ease-in, transform 2s ease-in; /* 비디오와 동일하게 2초 트랜지션 효과 적용 */
 }
 
