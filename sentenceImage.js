@@ -1,40 +1,111 @@
+// 미디어 트랜지션 시간 설정 (밀리초)
+const MEDIA_TRANSITION_IN_TIME = 3000;  // 나타나는 시간: 3초
+const MEDIA_TRANSITION_OUT_TIME = 3000; // 사라지는 시간: 3초
+
+// 현재 표시되고 있는 미디어의 번호 추적
+window.currentMediaNumber = null;
+// 미디어 처리 중 상태 추적
+window.isMediaProcessing = false;
+
 // 문장 이미지 관련 함수
 function showSentenceImage(sentenceIndex) {
-  // 홀수 번호 문장(1, 3, 5...)인 경우에만 이미지 표시
+  const realSentenceNumber = sentenceIndex + 1; // 1부터 시작하는 실제 문장 번호
+  console.log(`문장 폭발 감지: ${realSentenceNumber}번 문장`);
+  
+  // 첫번째 폭발인지 확인 (window.firstExplosionHappened 플래그 사용)
+  if (typeof window.firstExplosionHappened === 'undefined') {
+    window.firstExplosionHappened = false;
+  }
+  
+  // 이전 숨기기 타이머 취소
+  if (window.hideSentenceImageTimer) {
+    clearTimeout(window.hideSentenceImageTimer);
+    window.hideSentenceImageTimer = null;
+  }
+
+  // 홀수 번호 문장(1, 3, 5...)인 경우에만 미디어 변경 처리
   if (sentenceIndex % 2 === 0) { // 0부터 시작하는 인덱스에서는 짝수(0,2,4...)가 실제로는 홀수(1,3,5...)
-    const realSentenceNumber = sentenceIndex + 1; // 1부터 시작하는 실제 문장 번호
+    console.log(`홀수 문장 폭발 - 미디어 변경 시작: ${realSentenceNumber}번 미디어`);
     
-    console.log(`상단 이미지 표시 시작 (홀수 문장): 문장 번호 ${realSentenceNumber}`);
+    // 미디어 처리 중 플래그 설정
+    window.isMediaProcessing = true;
     
-    // 첫번째 폭발인지 확인 (window.firstExplosionHappened 플래그 사용)
-    if (typeof window.firstExplosionHappened === 'undefined') {
-      window.firstExplosionHappened = false;
-    }
-    const sentenceImageContainer = document.getElementById('sentenceImageContainer');
     if (!window.firstExplosionHappened) {
-      // 만약 hideSentenceImage 예약 타이머가 있으면 취소
-      if (window.hideSentenceImageTimer) {
-        clearTimeout(window.hideSentenceImageTimer);
-        window.hideSentenceImageTimer = null;
-      }
+      // 첫번째 폭발(1번 문장)의 경우 바로 미디어 표시
       window.firstExplosionHappened = true;
+      console.log(`첫번째 폭발(${realSentenceNumber}번): 미디어 직접 표시`);
+      
       showNewSentenceMedia(realSentenceNumber);
-      return;
-    }
-    // 이전 이미지/동영상이 있다면 먼저 숨기기
-    if (sentenceImageContainer && sentenceImageContainer.style.display === 'block') {
-      hideSentenceImage();
-      // 이미지/동영상이 완전히 사라진 후 새 이미지/동영상 표시
+      window.currentMediaNumber = realSentenceNumber;
+      
+      // 미디어 처리 완료
       setTimeout(() => {
-        showNewSentenceMedia(realSentenceNumber);
-      }, 1600); // 1.5초 사라짐 애니메이션 + 0.1초 여유
+        window.isMediaProcessing = false;
+        console.log(`${realSentenceNumber}번 미디어 표시 완료 (최초 표시)`);
+      }, MEDIA_TRANSITION_IN_TIME + 100);
     } else {
-      // 이전 이미지/동영상이 없다면 바로 새 이미지/동영상 표시
-      showNewSentenceMedia(realSentenceNumber);
+      // 이후 홀수 문장(3번, 5번 등)에서는 이전 미디어 페이드아웃 후 새 미디어 표시
+      console.log(`홀수 문장 폭발(${realSentenceNumber}번): 이전 미디어 페이드아웃 후 새 미디어 표시`);
+      
+      // 이전 미디어 페이드아웃 (3초 동안)
+      fadeOutCurrentMedia(() => {
+        console.log(`이전 미디어(${window.currentMediaNumber}번) 페이드아웃 완료`);
+        
+        // 페이드아웃 완료 후 콘텐츠 초기화
+        resetMediaElements();
+        
+        // 새 미디어 표시 (페이드인 3초)
+        console.log(`새 미디어(${realSentenceNumber}번) 페이드인 시작`);
+        showNewSentenceMedia(realSentenceNumber);
+        
+        // 미디어 번호 업데이트
+        window.currentMediaNumber = realSentenceNumber;
+        
+        // 미디어 처리 완료 - 페이드인 완료 후
+        setTimeout(() => {
+          window.isMediaProcessing = false;
+          console.log(`${realSentenceNumber}번 미디어 표시 완료`);
+        }, MEDIA_TRANSITION_IN_TIME + 100);
+      });
     }
   } else {
-    console.log(`짝수 문장 폭발 - 상단 이미지 표시 안함: ${sentenceIndex + 1}`);
+    // 짝수 문장(2, 4, 6...)인 경우 미디어 유지 (아무 동작 없음)
+    console.log(`짝수 문장 폭발 - 미디어 유지: ${realSentenceNumber}번 문장`);
   }
+}
+
+// 현재 표시 중인 미디어를 페이드아웃하는 함수
+function fadeOutCurrentMedia(callback) {
+  const sentenceImageContainer = document.getElementById('sentenceImageContainer');
+  const sentenceImage = document.getElementById('sentenceImage');
+  const sentenceVideo = document.getElementById('sentenceVideo');
+  
+  console.log(`미디어 페이드아웃 시작 - 소요 시간: ${MEDIA_TRANSITION_OUT_TIME/1000}초`);
+  
+  // 페이드아웃 효과 적용
+  if (sentenceImage && sentenceImage.style.display !== 'none') {
+    sentenceImage.style.transition = `opacity ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out`;
+    sentenceImage.style.opacity = '0';
+    console.log('이미지 페이드아웃 시작');
+  }
+  
+  if (sentenceVideo && sentenceVideo.style.display !== 'none') {
+    sentenceVideo.style.transition = `opacity ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out, transform ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out`;
+    sentenceVideo.style.opacity = '0';
+    sentenceVideo.style.transform = 'scale(0.8)';
+    
+    // 비디오 재생 중지
+    sentenceVideo.pause();
+    console.log('비디오 페이드아웃 시작 및 재생 중지');
+  }
+  
+  // 페이드아웃이 완료된 후 콜백 실행 (정확히 3초 후)
+  setTimeout(() => {
+    console.log('미디어 페이드아웃 완료');
+    if (typeof callback === 'function') {
+      callback();
+    }
+  }, MEDIA_TRANSITION_OUT_TIME);
 }
 
 function showNewSentenceMedia(realSentenceNumber) {
@@ -53,7 +124,7 @@ function showNewSentenceMedia(realSentenceNumber) {
   // 이미지와 동영상 요소를 모두 초기화
   resetMediaElements();
 
-  // 먼저 top 폴더 내 MP4 파일 확인
+  // top 폴더 내 MP4 파일 확인 (요구사항: top 폴더 내 미디어만 사용)
   checkFileExists(`images/top/${realSentenceNumber}.mp4`)
     .then(existsInTop => {
       if (existsInTop) {
@@ -61,36 +132,17 @@ function showNewSentenceMedia(realSentenceNumber) {
         console.log(`top 폴더에서 동영상 찾음: ${realSentenceNumber}.mp4`);
         showVideoContent(realSentenceNumber, 'top');
       } else {
-        // 루트 images 폴더에서 MP4 확인
-        checkFileExists(`images/${realSentenceNumber}.mp4`)
-          .then(existsInRoot => {
-            if (existsInRoot) {
-              // 루트 폴더에 MP4 파일이 존재하면 비디오 요소 사용
-              console.log(`루트 폴더에서 동영상 찾음: ${realSentenceNumber}.mp4`);
-              showVideoContent(realSentenceNumber);
+        // top 폴더에서 이미지 파일(jpg) 확인
+        checkFileExists(`images/top/${realSentenceNumber}.jpg`)
+          .then(imageExistsInTop => {
+            if (imageExistsInTop) {
+              // top 폴더에 JPG 파일이 존재하면 이미지 요소 사용
+              console.log(`top 폴더에서 이미지 찾음: ${realSentenceNumber}.jpg`);
+              showImageContent(realSentenceNumber, 'top');
             } else {
-              // MP4가 없으면 이미지 파일(jpg) 확인
-              checkFileExists(`images/top/${realSentenceNumber}.jpg`)
-                .then(imageExistsInTop => {
-                  if (imageExistsInTop) {
-                    // top 폴더에 JPG 파일이 존재하면 이미지 요소 사용
-                    console.log(`top 폴더에서 이미지 찾음: ${realSentenceNumber}.jpg`);
-                    showImageContent(realSentenceNumber, 'top');
-                  } else {
-                    checkFileExists(`images/${realSentenceNumber}.jpg`)
-                      .then(imageExistsInRoot => {
-                        if (imageExistsInRoot) {
-                          // 루트 폴더에 JPG 파일이 존재하면 이미지 요소 사용
-                          console.log(`루트 폴더에서 이미지 찾음: ${realSentenceNumber}.jpg`);
-                          showImageContent(realSentenceNumber);
-                        } else {
-                          // 어떤 파일도 존재하지 않으면 컨테이너 숨김
-                          console.log(`미디어 파일(이미지/동영상)을 찾을 수 없습니다: ${realSentenceNumber}`);
-                          sentenceImageContainer.style.display = 'none';
-                        }
-                      });
-                  }
-                });
+              // top 폴더에 미디어 파일이 없는 경우
+              console.log(`top 폴더에서 미디어 파일을 찾을 수 없습니다: ${realSentenceNumber}`);
+              sentenceImageContainer.style.display = 'none';
             }
           });
       }
@@ -117,8 +169,10 @@ function showImageContent(realSentenceNumber, folder = '') {
   }
   sentenceImage.style.display = 'block';
   
-  // 기존 애니메이션 클래스 제거
+  // 기존 스타일 초기화 및 애니메이션 준비
   sentenceImage.classList.remove('show');
+  sentenceImage.style.opacity = '0';
+  sentenceImage.style.transition = `opacity ${MEDIA_TRANSITION_IN_TIME/1000}s ease-in`;
   
   // 이미지 경로 설정 (폴더 경로 포함)
   let imagePath = '';
@@ -139,9 +193,19 @@ function showImageContent(realSentenceNumber, folder = '') {
     sentenceImage.style.outline = 'none';
     sentenceImageContainer.style.display = 'block';
     
-    // 약간의 지연 후 애니메이션 시작 (브라우저가 DOM 변경을 인식할 시간 제공)
+    // 이미지 페이드인 시작 (DOM 변경을 인식할 시간 제공)
     setTimeout(() => {
-      sentenceImage.classList.add('show');
+      // 정확히 3초에 걸쳐 페이드인
+      console.log(`${realSentenceNumber}번 이미지 페이드인 시작 - 소요 시간: ${MEDIA_TRANSITION_IN_TIME/1000}초`);
+      sentenceImage.style.opacity = '1';
+      
+      // 애니메이션 완료 후 클래스 추가 (CSS 효과 적용을 위해)
+      setTimeout(() => {
+        sentenceImage.classList.add('show');
+        console.log(`${realSentenceNumber}번 이미지 페이드인 완료`);
+      }, MEDIA_TRANSITION_IN_TIME);
+      
+      // 미디어는 다음 홀수 문장 폭발 시까지 계속 표시됨
     }, 50);
   };
   
@@ -214,7 +278,7 @@ function showVideoContent(realSentenceNumber, folder = '') {
     sentenceVideo.style.backgroundColor = 'transparent';
     sentenceVideo.style.transform = 'scale(0)';
     sentenceVideo.style.opacity = '0';
-    sentenceVideo.style.transition = 'all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    sentenceVideo.style.transition = `opacity ${MEDIA_TRANSITION_IN_TIME/1000}s ease-in, transform ${MEDIA_TRANSITION_IN_TIME/1000}s ease-in`;
     sentenceImageContainer.appendChild(sentenceVideo);
   }
   
@@ -340,11 +404,20 @@ function showVideoContent(realSentenceNumber, folder = '') {
     // 컨테이너 표시
     sentenceImageContainer.style.display = 'block';
     
-    // 약간의 지연 후 애니메이션 시작 (자동 재생 없음)
+    // 약간의 지연 후 페이드인 애니메이션 시작 (자동 재생 없음)
     setTimeout(() => {
+      console.log(`${realSentenceNumber}번 비디오 페이드인 시작 - 소요 시간: ${MEDIA_TRANSITION_IN_TIME/1000}초`);
+      
+      // 정확히 3초에 걸쳐 페이드인 애니메이션 수행
       sentenceVideo.style.transform = 'scale(1)';
       sentenceVideo.style.opacity = '1';
+      
       // 자동 재생하지 않음 - 사용자가 직접 플레이 버튼을 클릭해야 함
+      
+      // 페이드인 완료 이벤트 (로깅용)
+      setTimeout(() => {
+        console.log(`${realSentenceNumber}번 비디오 페이드인 완료`);
+      }, MEDIA_TRANSITION_IN_TIME);
     }, 50);
   };
   
@@ -372,19 +445,22 @@ function resetMediaElements() {
   }
 }
 
-function hideSentenceImage() {
+function hideSentenceImage(hideContainer = true) {
   const sentenceImageContainer = document.getElementById('sentenceImageContainer');
   const sentenceImage = document.getElementById('sentenceImage');
   const sentenceVideo = document.getElementById('sentenceVideo');
   
   if (sentenceImageContainer) {
-    // 이미지 애니메이션 클래스 제거
+    // 페이드아웃 트랜지션 설정
     if (sentenceImage) {
       sentenceImage.classList.remove('show');
+      sentenceImage.style.transition = `opacity ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out`;
+      sentenceImage.style.opacity = '0';
     }
     
-    // 비디오 애니메이션 효과 제거
+    // 비디오 페이드아웃 효과 적용 (3초)
     if (sentenceVideo) {
+      sentenceVideo.style.transition = `opacity ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out, transform ${MEDIA_TRANSITION_OUT_TIME/1000}s ease-out`;
       sentenceVideo.style.transform = 'scale(0)';
       sentenceVideo.style.opacity = '0';
       sentenceVideo.pause();
@@ -395,10 +471,25 @@ function hideSentenceImage() {
       clearTimeout(window.hideSentenceImageTimer);
       window.hideSentenceImageTimer = null;
     }
+    
+    // 페이드아웃 시간(3초) 후 컨테이너 처리
     window.hideSentenceImageTimer = setTimeout(() => {
-      sentenceImageContainer.style.display = 'none';
+      if (hideContainer) {
+        // 컨테이너를 숨기는 경우
+        sentenceImageContainer.style.display = 'none';
+      } else {
+        // 컨테이너는 유지하고 내용만 초기화
+        resetMediaElements();
+      }
       window.hideSentenceImageTimer = null;
-    }, 1500); // 1.5초 후 완전히 숨김
+      
+      // 현재 미디어 번호 초기화 (다음 미디어 표시 준비)
+      if (hideContainer) {
+        window.currentMediaNumber = null;
+      }
+      
+      console.log('미디어 페이드아웃 완료');
+    }, MEDIA_TRANSITION_OUT_TIME);
   }
 }
 

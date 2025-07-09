@@ -2925,10 +2925,29 @@ function drawPlayButton(buttonRect, baseScaleForOriginalSize) {
 
 
 function drawCenterSentence() {
+    // 문장이 없고 폭죽도 없으면 모든 복제본 제거하고 종료
     if (!currentQuestionSentence && !currentAnswerSentence && !fireworks) {
+        // 모든 종류의 복제본 및 클론 제거
         centerSentenceWordRects = [];
+        sentenceWordRects = [];
+        questionWordClones = [];
+        subjectAuxClones = [];
+        verbClones = [];
+        
+        // 추가 클론 배열 초기화
+        try {
+            if (window.wordClones) window.wordClones = [];
+            if (window.auxiliaryClones) window.auxiliaryClones = [];
+            if (window.textClones) window.textClones = [];
+            if (window.explosionParticles) window.explosionParticles = [];
+        } catch(e) {
+            console.log("복제본 제거 중 오류:", e);
+        }
         return;
     }
+    
+    // 복제본 관련 배열 항상 초기화 - 중복을 방지하기 위해
+    centerSentenceWordRects = [];
 
     let newWordRects = [];
 
@@ -3692,13 +3711,14 @@ function update(delta) {
             const sentenceToFirework = sentences[sentenceIndex];
             const globalIndexOfSentence = sentenceIndex;
             
-            // 모든 문장에 대해 상단 이미지 표시 (조건 제거)
+            // 홀수 번호 문장(인덱스 기준 0,2,4...)에서만 미디어 표시
             if (typeof showSentenceImage === 'function') {
-                if (explosionCount === 0) {
-                    // 첫번째 폭발(게임 시작 후 첫번째)에서는 setTimeout 없이 바로 미디어 표시
+                // 홀수 번호 문장(실제 번호는 1,3,5... 인덱스는 0,2,4...)에서만 미디어 처리
+                if (globalIndexOfSentence % 2 === 0) {
+                    console.log(`홀수 문장 폭발: ${globalIndexOfSentence+1}번 문장, 상단 미디어 표시`);
                     showSentenceImage(globalIndexOfSentence);
                 } else {
-                    showSentenceImage(globalIndexOfSentence);
+                    console.log(`짝수 문장 폭발: ${globalIndexOfSentence+1}번 문장, 상단 미디어 표시 안함`);
                 }
             }
             
@@ -3853,6 +3873,7 @@ function resetGameStateForStartStop() {
     activeWordTranslation = null;
     if (wordTranslationTimeoutId) { clearTimeout(wordTranslationTimeoutId); wordTranslationTimeoutId = null; }
     centerSentenceWordRects = []; isActionLocked = false;
+    sentenceWordRects = []; // 문장 단어 사각형 초기화
     
     // 폭발 횟수 초기화
     explosionCount = 0;
@@ -3862,15 +3883,37 @@ function resetGameStateForStartStop() {
         hideSentenceImage();
     }
 
-  // Reset word animations
-  activeAnimations = []; // Clear the array of active animations  // 게임 시작/정지 시 모든 클론 제거 및 모든 플래그 리셋 (완전 초기화)
-  console.log("🔄 Game start/stop - clearing all clones and resetting all flags");
-  clearQuestionWordClones(); // 모든 클론 제거
-  cloneCreatedForCurrentQuestion = false; // 게임 초기화
-  cloneCreatedForCurrentAnswer = false;
-  
-  // 바운스 애니메이션 정리
-  clearBounceAnimations();
+    // Reset word animations
+    activeAnimations = []; // Clear the array of active animations
+    
+    // 게임 시작/정지 시 모든 클론 제거 및 모든 플래그 리셋 (완전 초기화)
+    console.log("🔄 Game start/stop - clearing all clones and resetting all flags");
+    
+    // 모든 종류의 복제본 및 클론 배열 초기화
+    clearQuestionWordClones(); // 의문사 클론 제거
+    clearSubjectAuxClones(); // 주어+조동사 클론 제거 
+    clearVerbClones(); // 동사 클론 제거
+    
+    // 추가 클론 배열 초기화
+    try {
+        if (window.wordClones) window.wordClones = [];
+        if (window.auxiliaryClones) window.auxiliaryClones = [];
+        if (window.textClones) window.textClones = [];
+        if (window.explosionParticles) window.explosionParticles = [];
+        if (window.sentenceWordObjects) window.sentenceWordObjects = [];
+        if (window.floatingWords) window.floatingWords = [];
+        if (window.flyingElements) window.flyingElements = [];
+    } catch(e) {
+        console.log("추가 복제본 제거 중 오류:", e);
+    }
+    
+    cloneCreatedForCurrentQuestion = false; // 게임 초기화
+    cloneCreatedForCurrentAnswer = false;
+    
+    // 바운스 애니메이션 정리
+    clearBounceAnimations();
+    
+    console.log("게임 상태 완전 초기화 및 모든 복제본 제거 완료");
 }
 
 function startGame() {
@@ -4738,8 +4781,7 @@ function populateSentenceList() {
             const line2 = lines[1] ? lines[1].trim() : "";
             const sentenceObj = { line1, line2 };
             
-            // 이전 문장 및 복제본 초기화
-            clearQuestionWordClones(); // 모든 클론 제거
+            // 이전 문장 초기화
             currentQuestionSentence = null;
             currentAnswerSentence = null;
             currentQuestionSentenceIndex = null;
@@ -4778,28 +4820,101 @@ function populateSentenceList() {
             }
             
             // 항상 문장을 화면에 표시 (게임 상태와 무관하게)
-            // 캔버스 초기화
+            
+            // 선택된 문장 정보 저장 (resetGameStateForStartStop 이후 복원하기 위해)
+            const selectedSentenceInfo = {
+                isOdd: isOdd,
+                sentenceObj: sentenceObj,
+                index: index
+            };
+            console.log(`선택한 문장 정보 저장: ${index + 1}번 문장`);
+            
+            // 게임 상태 완전 초기화 (resetGameStateForStartStop 함수 호출)
+            console.log("드롭다운에서 문장 선택: 게임 상태 완전 초기화 시작");
+            resetGameStateForStartStop();
+            
+            // 선택한 문장 정보 복원
+            console.log(`선택한 문장 정보 복원: ${index + 1}번 문장`);
+            if (selectedSentenceInfo.isOdd) {
+                currentQuestionSentence = selectedSentenceInfo.sentenceObj;
+                currentQuestionSentenceIndex = selectedSentenceInfo.index;
+            } else {
+                currentAnswerSentence = selectedSentenceInfo.sentenceObj;
+                currentAnswerSentenceIndex = selectedSentenceInfo.index;
+            }
+            
+            // 캔버스 완전히 초기화 (복제본도 모두 제거하기 위함)
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 추가 확인: 모든 복제본 관련 배열 명시적 초기화
+            centerSentenceWordRects = [];
+            sentenceWordRects = [];
+            
+            // 모든 문장 복제본 클론 배열 초기화 (중요: 이것이 복제본 문제 해결의 핵심)
+            questionWordClones = [];
+            subjectAuxClones = [];
+            verbClones = [];
+            
+            // 두 번 더 확실하게 복제본 제거를 위한 함수 호출
+            try {
+                if (typeof clearQuestionWordClones === 'function') {
+                    clearQuestionWordClones(); // 의문사 클론 제거
+                }
+                if (typeof clearSubjectAuxClones === 'function') {
+                    clearSubjectAuxClones(); // 주어+조동사 클론 제거
+                }
+                if (typeof clearVerbClones === 'function') {
+                    clearVerbClones(); // 동사 클론 제거
+                }
+                
+                // 복제본과 관련된 모든 요소 초기화
+                if (window.explosionParticles) window.explosionParticles = [];
+                if (window.sentenceWordObjects) window.sentenceWordObjects = [];
+                if (window.floatingWords) window.floatingWords = [];
+                if (window.flyingElements) window.flyingElements = [];
+                
+                // 게임 엔진 상태 초기화 플래그
+                cloneCreatedForCurrentQuestion = false;
+                cloneCreatedForCurrentAnswer = false;
+                
+                // 추가 클론 배열 초기화 (다른 종류의 복제본도 모두 제거)
+                if (window.wordClones) window.wordClones = [];
+                if (window.auxiliaryClones) window.auxiliaryClones = [];
+                if (window.textClones) window.textClones = [];
+                
+                console.log("모든 종류의 복제본 제거 완료");
+            } catch(e) {
+                console.log("복제본 제거 중 오류:", e);
+            }
             
             // 기본 게임 화면 그리기
             draw();
+            
+            // 문장이 설정되었는지 확인하고 로깅
+            console.log(`문장 설정 확인: currentQuestionSentence=${!!currentQuestionSentence}, currentAnswerSentence=${!!currentAnswerSentence}`);
             
             // 중앙 문장 표시 (필요한 경우 강제로 투명도 설정)
             centerAlpha = 1.0;
             drawCenterSentence();
             
+            console.log("문장 선택: 게임 화면 초기화 및 새 문장 표시");
+            
             // 다음 프레임에서도 한 번 더 그려서 확실하게 표시되도록 함
             // 이는 게임 정지 상태에서 resetGameStateForStartStop 함수가 호출되어 
             // currentQuestionSentence와 currentAnswerSentence를 null로 설정하는 문제를 해결하기 위함
             requestAnimationFrame(function() {
-                // 캔버스 초기화
+                // 캔버스 완전히 초기화
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = 'black';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
-                // 중앙 문장 표시
+                // 중앙 문장만 표시
                 centerAlpha = 1.0;
                 drawCenterSentence();
+                
+                console.log("문장 선택: 다음 프레임에서 화면 다시 그리기 완료");
             });
         });
         // sentenceItem에는 클릭 이벤트를 부여하지 않는다.
