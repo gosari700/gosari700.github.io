@@ -224,7 +224,7 @@ html, body {
   overflow-y: scroll; /* auto 대신 항상 스크롤바 표시 */  -webkit-overflow-scrolling: touch; /* 모바일 스크롤 개선 */
   width: 590px; /* 약간 더 넓힘 */
   border-radius: 4px;
-  z-index: 1000; /* 최상위 레이어로 설정 */
+  z-index: 10000; /* 미디어창(9999)보다 높은 z-index 설정 */
   scrollbar-width: auto;
   scrollbar-color: #666 #222;  overscroll-behavior: contain; /* 스크롤 중 부모 요소 스크롤 방지 */  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   padding-top: 15px; /* 내부 상단 여백 15px (외부 여백은 이미 top 속성으로 확보) */

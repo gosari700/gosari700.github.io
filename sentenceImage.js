@@ -1,3 +1,6 @@
+// 중요: 문장 위치 설정 (절대 수정하지 마세요)
+const SENTENCE_CONTAINER_TOP_POSITION = '43px';
+
 // 미디어 트랜지션 시간 설정 (밀리초)
 const MEDIA_TRANSITION_IN_TIME = 3000;  // 나타나는 시간: 3초
 const MEDIA_TRANSITION_OUT_TIME = 3000; // 사라지는 시간: 3초
@@ -493,14 +496,28 @@ function hideSentenceImage(hideContainer = true) {
   }
 }
 
+// 문장 위치 조정 함수
+function adjustSentencePosition() {
+  const sentenceImageContainer = document.getElementById('sentenceImageContainer');
+  if (sentenceImageContainer) {
+    // 최상위 우선순위로 위치 설정
+    sentenceImageContainer.style.setProperty('top', SENTENCE_CONTAINER_TOP_POSITION, 'important');
+    console.log(`문장 컨테이너 위치 강제 설정: ${SENTENCE_CONTAINER_TOP_POSITION}`);
+  }
+}
+
 // 이미지/동영상 초기화
 document.addEventListener('DOMContentLoaded', function() {
   hideSentenceImage();
   
-  // 상단 이미지/동영상 컨테이너 위치 조정
-  const sentenceImageContainer = document.getElementById('sentenceImageContainer');
-  if (sentenceImageContainer) {
-    sentenceImageContainer.style.top = '45px'; // 메뉴 아이콘이 가려지지 않도록 함 (55px에서 10px 올림)
-    console.log('상단 이미지 컨테이너 위치 조정: 45px');
-  }
+  // 즉시 위치 설정
+  adjustSentencePosition();
+  
+  // 0.5초마다 위치 재설정 (5초 동안)
+  let count = 0;
+  const intervalId = setInterval(() => {
+    adjustSentencePosition();
+    count++;
+    if (count >= 10) clearInterval(intervalId);
+  }, 500);
 });

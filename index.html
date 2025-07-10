@@ -8,7 +8,15 @@
   <meta http-equiv="Expires" content="0" />
   <meta name="turbolinks-cache-control" content="no-cache" />
   <title>Mobile Galaga</title>
-  <link rel="stylesheet" href="style.css?v=3.2" />
+  <link rel="stylesheet" href="style.css?v=3.9" />
+  <style id="critical-style">
+    /* 최우선 스타일 - 무조건 모든 다른 스타일보다 우선 적용됨 */
+    #sentenceImageContainer {
+      top: 43px !important;
+      position: fixed !important;
+      z-index: 9999 !important;
+    }
+  </style>
 </head>
 <body>  <!-- 드롭다운 버튼 (START 버튼 왼쪽) -->
   <div id="sentenceDropdown">
@@ -26,7 +34,7 @@
   </div>
   <!-- 볼륨버튼: 오른쪽 상단에 별도 위치 -->
   <button id="volumeBtn" class="volume-btn">🔊</button>  <!-- 문장 이미지/동영상 표시를 위한 컨테이너 -->
-  <div id="sentenceImageContainer" class="no-border-at-all" style="position:fixed !important; border:0 none transparent !important; box-shadow:none !important; outline:0 none transparent !important; background-color:transparent !important; top:48px !important;">
+  <div id="sentenceImageContainer" class="no-border-at-all" style="position:fixed !important; border:0 none transparent !important; box-shadow:none !important; outline:0 none transparent !important; background-color:transparent !important; top:43px !important;">
     <img id="sentenceImage" class="no-border-at-all" src="" alt="Sentence Image" style="border:0 none transparent !important; outline:0 none transparent !important; border-radius:0 !important; box-shadow:none !important; background-color:transparent !important; padding:0; margin:0;" />
     <!-- 동영상 요소는 자바스크립트에서 필요할 때 동적으로 생성됩니다 -->
   </div>
@@ -42,9 +50,58 @@
 
   <!-- 김 효과를 위한 숨겨진 비디오 요소 -->  <video id="coffeeSteamVideo" src="images/coffee6.webm" autoplay loop muted playsinline style="display: none;"></video>
   <script src="bottomImage.js?v=4.6"></script>
-  <script src="script.js?v=2.9"></script>
+  <script src="script.js?v=3.5"></script>
   <script src="dropdown.js?v=1.1"></script>
   <script src="sentenceMediaManager.js?v=1.2"></script>
+  <script src="sentenceImage.js?v=1.4"></script>
+  <script>
+    // 문장 컨테이너의 위치를 강제 설정하는 스크립트
+    (function() {
+      // 문장 위치 설정 함수
+      function setTopPosition() {
+        const container = document.getElementById('sentenceImageContainer');
+        if (container) {
+          // 현재 위치 기록 및 로깅
+          const oldTop = container.style.top;
+          // 최상위 우선순위로 강제 설정
+          // 컨테이너 위치 변경은 실제 문장 위치에 영향을 주지 않음 (문장은 script.js에서 그려짐)
+          container.style.setProperty('top', '43px', 'important');
+          console.log(`문장 컨테이너 위치 설정: ${oldTop} -> 43px`);
+        }
+      }
+      
+      // 페이지 로드 후 실행
+      document.addEventListener('DOMContentLoaded', function() {
+        setTopPosition();
+        
+        // 0.5초 후에도 실행 (다른 스크립트가 덮어쓸 수 있으므로)
+        setTimeout(setTopPosition, 500);
+        
+        // 1초 후에도 실행
+        setTimeout(setTopPosition, 1000);
+        
+        // MutationObserver로 style 속성이 변경될 때마다 감시
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'style') {
+              // style 속성이 변경되면 즉시 다시 설정
+              setTopPosition();
+            }
+          });
+        });
+        
+        // 문장 컨테이너 감시 시작
+        const container = document.getElementById('sentenceImageContainer');
+        if (container) {
+          observer.observe(container, { attributes: true });
+        }
+      });
+      
+      // 초기 실행 (DOM 로드 전에도)
+      setTimeout(setTopPosition, 10);
+    })();
+  </script>
+
   <script>
     // 동영상 플레이어 컨트롤 향상을 위한 추가 스크립트
     document.addEventListener('DOMContentLoaded', function() {

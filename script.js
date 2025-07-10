@@ -419,8 +419,10 @@ const PETAL_FLUTTER_AMPLITUDE_BASE = 3.5;
 const PETAL_FLUTTER_SPEED_BASE = 3.0;
 
 const SENTENCE_VERTICAL_ADJUSTMENT = -36; // 기존 -31에서 5px 더 감소시켜 첫 번째 문장을 추가로 위로 올림
-const ANSWER_OFFSET_Y = 67; // 67로 변경하여 두 번째 문장을 7px 위로 올림
+const ANSWER_OFFSET_Y = 62; // 67에서 62로 변경하여 두 번째 문장을 5px 위로 올림
 const LINE_HEIGHT = 30;
+// 첫째줄과 둘째줄 사이의 간격을 40% 확대한 값 (30 * 1.4 = 42)
+const INCREASED_LINE_SPACING = 42;
 const PLAYER_TOUCH_Y_OFFSET = 15;
 
 let player = { x: 0, y: 0, w: PLAYER_SIZE, h: PLAYER_SIZE };
@@ -2714,7 +2716,19 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
 
     for (let i = 0; i < lines.length; i++) {
         const lineText = lines[i];
-        let currentLineCenterY = yFirstLineTextCenter + i * LINE_HEIGHT;
+        
+        // 첫째줄과 둘째줄 사이의 간격 조정을 위해 둘째줄(i === 1)인 경우 INCREASED_LINE_SPACING 사용
+        let lineSpacing = i === 0 ? LINE_HEIGHT : INCREASED_LINE_SPACING;
+        let currentLineCenterY;
+        
+        if (i === 0) {
+            // 첫째줄은 원래 위치에서 2px 위로 이동 (y축 -2px)
+            currentLineCenterY = yFirstLineTextCenter - 2;
+        } else {
+            // 둘째줄은 첫째줄 + 증가된 줄간격
+            currentLineCenterY = yFirstLineTextCenter + LINE_HEIGHT + (lineSpacing - LINE_HEIGHT);
+        }
+        
         // 모바일 환경 감지
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         // 각 줄마다 색상 플래그 초기화 (줄별로 독립적으로 색상 처리)
@@ -4568,6 +4582,13 @@ function initializeSentenceDropdown() {
             dropdownBtn.style.minHeight = '';
             dropdownBtn.style.padding = '';
             
+            // 미디어 컨테이너 다시 표시
+            const sentenceImageContainer = document.getElementById('sentenceImageContainer');
+            if (sentenceImageContainer) {
+                sentenceImageContainer.style.display = 'block';
+                console.log("미디어 컨테이너 표시");
+            }
+            
             // 시작 화면으로 돌아갈 때 버튼 활성화
             setTopButtonsDisabled(false);
             
@@ -4609,6 +4630,13 @@ function initializeSentenceDropdown() {
             if (typeof isBottomMediaPlaying !== 'undefined' && isBottomMediaPlaying) {
                 if (typeof toggleBottomMediaPause === 'function') toggleBottomMediaPause();
                 isDropdownBottomMediaPaused = true;
+            }
+            
+            // 미디어 컨테이너 숨기기 (드롭다운 메뉴가 위에 표시되도록)
+            const sentenceImageContainer = document.getElementById('sentenceImageContainer');
+            if (sentenceImageContainer) {
+                sentenceImageContainer.style.display = 'none';
+                console.log("미디어 컨테이너 숨김");
             }
             
             // 드롭다운 버튼 모양 변경
