@@ -301,7 +301,12 @@ const SentenceMediaManager = {
       sentenceVideo.setAttribute('webkit-playsinline', 'true');
       sentenceVideo.setAttribute('x-webkit-airplay', 'allow');
       sentenceVideo.setAttribute('data-tap-disabled', 'false');
-      sentenceVideo.controlsList = "nodownload";
+      
+      // 점 3개 메뉴 강제 제거를 위한 추가 속성
+      sentenceVideo.controlsList = "nodownload noremoteplayback nofullscreen noplaybackrate";
+      sentenceVideo.setAttribute('controlsList', 'nodownload noremoteplayback nofullscreen noplaybackrate');
+      sentenceVideo.style.setProperty('--media-controls-opacity', '0', 'important');
+      
       sentenceVideo.disablePictureInPicture = true;
       sentenceVideo.preload = "auto";
       

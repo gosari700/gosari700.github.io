@@ -44,12 +44,12 @@ img, image, video, #sentenceImage, #sentenceVideo {
   display: none !important;
 }
 
-/* 플레이 버튼을 시계 자리로 이동하고 크게 표시, y축으로 5px 위로, x축으로 10px 우측으로 이동 */
+/* 플레이 버튼을 시계 자리로 이동하고 크게 표시, y축으로 5px 위로, x축으로 4px 우측으로 이동 (6px 좌측 이동) */
 #sentenceVideo::-webkit-media-controls-play-button {
   display: block !important;
   position: relative !important;
   margin-right: 10px !important;
-  transform: scale(1.5) translate(10px, -5px) !important; /* 플레이 버튼 크기 확대 및 x축 10px, y축 -5px 이동(위로 15px 올림) */
+  transform: scale(1.5) translate(4px, -5px) !important; /* 플레이 버튼 크기 확대 및 x축 4px, y축 -5px 이동(x축을 10px에서 4px로 변경하여 6px 좌측 이동) */
 }
 
 /* 비디오 컨트롤바 설정 - 패딩 추가하여 버튼 위치 조정 */
@@ -480,4 +480,31 @@ video::-webkit-media-controls {
   text-shadow: none !important;
   filter: none !important;
   box-shadow: none !important;
+}
+
+/* 모든 비디오 요소의 컨트롤 3개 메뉴 완전 제거 */
+video::-webkit-media-controls-overflow-button,
+video::-webkit-media-controls-overflow-menu-button,
+video::-internal-media-controls-overflow-button,
+#sentenceVideo::-webkit-media-controls-overflow-button,
+#sentenceVideo::-webkit-media-controls-overflow-menu-button,
+#sentenceVideo::-internal-media-controls-overflow-button {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  right: -9999px !important;
+}
+
+/* Firefox용 추가 스타일 */
+video::-moz-media-controls-overflow-button {
+  display: none !important;
+}
+
+/* Edge용 추가 스타일 */
+video::-ms-media-controls-overflow-button {
+  display: none !important;
 }

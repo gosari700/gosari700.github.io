@@ -240,8 +240,12 @@ function showVideoContent(realSentenceNumber, folder = '') {
     sentenceVideo.setAttribute('webkit-playsinline', 'true'); // iOS Safari 호환성
     sentenceVideo.setAttribute('x-webkit-airplay', 'allow'); // AirPlay 허용
     sentenceVideo.setAttribute('data-tap-disabled', 'false'); // 탭 활성화
-    // 컨트롤 기능 설정 - 플레이 버튼 표시, 시계 표시 제거
-    sentenceVideo.controlsList = "nodownload"; // 다운로드 버튼 제거
+    
+    // 점 3개 메뉴 강제 제거를 위한 추가 속성
+    sentenceVideo.controlsList = "nodownload noremoteplayback nofullscreen noplaybackrate";
+    sentenceVideo.setAttribute('controlsList', 'nodownload noremoteplayback nofullscreen noplaybackrate');
+    sentenceVideo.style.setProperty('--media-controls-opacity', '0', 'important');
+    
     sentenceVideo.disablePictureInPicture = true; // PiP 모드 비활성화
     sentenceVideo.preload = "auto"; // 데이터 미리 로드
     
